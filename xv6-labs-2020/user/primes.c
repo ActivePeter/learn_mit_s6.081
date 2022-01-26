@@ -2,8 +2,15 @@
 #include "kernel/stat.h"
 #include "user/user.h"
 #include "user/pa_util.h"
-void concurrent_prime_recur(int pip_read_fd);
+void concurrent_prime_recur(int pip_read_fd,int tag);
 void concurrent_prime(int num);
+
+void recur(int test){
+    if(test>0){
+        printf("%d\n",test);
+        recur(test-1);
+    }
+}
 
 int
 main(int argc, char *argv[])
@@ -26,11 +33,15 @@ main(int argc, char *argv[])
         printf("num is %d\n",num);
         if(num!=-1){
             //has num
+            if(num>35)num=35;
             concurrent_prime(num);
         }
     }
+    // recur(40);
     exit(0);
 }
+
+
 
 void concurrent_prime(int num){
     int p[2];
@@ -39,58 +50,88 @@ void concurrent_prime(int num){
     int a=fork();
     
     if(a==0){
-        concurrent_prime_recur(p[Pipe_Read_Id]);
+        concurrent_prime_recur(p[Pipe_Read_Id],1);
     }else{
         int elem=2;
         printf("prime %d\n",2);
         for(int i=3;i<=num;i++){
             if(i%elem!=0){
-                printf("write %d\n",i);
+                // printf("write %d\n",i);
                 write(p[Pipe_Write_Id],&i,sizeof(i));
             }else{
                 // printf("no write %d\n",i);
             }
             sleep(1);
         }
+        // elem=-1;
+        // write(p[Pipe_Write_Id],&elem,sizeof(int));
+        close(p[Pipe_Write_Id]);
+        printf("close w %d\n",0);
     }
 }
+void concurrent_prime_recur(int pip_read_fd,int tag){
 
-void concurrent_prime_recur(int pip_read_fd){
+
+//////////////////////////////////////////////////////////
     // printf("con\n");
     int elem;
     read(pip_read_fd,&elem,sizeof(int));
+    if(elem==0){
+        //first is the end,end recur
+        printf("close r %d\n",tag-1);
+        close(pip_read_fd);
+        return;
+    }//not -1,as dividend,
     printf("prime %d\n",elem);
     int elem2;
     sleep(1);
     read(pip_read_fd,&elem2,sizeof(int));
-    printf("read %d\n",elem2);
-//     if(elem2==-1){
-        
-//         //end
-//         return;
-//     }else{
-//         //continue split
-//         int p[2];
-//         pipe(p);
+    // printf("read %d\n",elem2);
+    if(elem2==0){//no need to fork
+        //end
+        printf("close r %d\n",tag-1);
+        close(pip_read_fd);
+        return;
+    }else{
+        //continue split
+        int p[2];
+        // while(1)
+        {
+            int r=pipe(p);
+            if(r==0){//succ create
+                // break;
+            }else{
+                printf("failed to create\n");
+            }
+        }
 
-//         int a=fork();
+        int a=fork();
         
-//         if(a==0){
-//             concurrent_prime_recur(p[Pipe_Read_Id]);
-//         }else{
-// __read:
-//             sleep(1);
-//             read(pip_read_fd,&elem2,sizeof(elem2));
-//             if(elem2==-1){
-//                 write(p[Pipe_Write_Id],&elem2,sizeof(elem2)); 
-//             }else{
-//                 if(elem2%elem!=0){
-//                     write(p[Pipe_Write_Id],&elem2,sizeof(elem2)); 
-//                 }
-//                 goto __read;
-//             }
-//         }
-//     }
+        if(a==0){
+            concurrent_prime_recur(p[Pipe_Read_Id],tag+1);
+        }else{
+            //dont forget to send it
+            write(p[Pipe_Write_Id],&elem2,sizeof(elem2)); 
+__read:
+            sleep(1);
+            // printf("br\n");
+            read(pip_read_fd,&elem2,sizeof(elem2));
+            // printf("ar\n");
+            if(elem2==0){
+                
+                close(pip_read_fd);
+                close(p[Pipe_Write_Id]);
+                printf("close r %d\n",tag-1);
+                printf("close w %d\n",tag);
+                // write(p[Pipe_Write_Id],&elem2,sizeof(elem2)); 
+            }else{
+                if(elem2%elem!=0){
+                    write(p[Pipe_Write_Id],&elem2,sizeof(elem2)); 
+                }
+                goto __read;
+            }
+        }
+    }
     
 }
 
