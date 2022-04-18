@@ -1,3 +1,7 @@
+- [Lab: page tables (mit.edu)](https://pdos.csail.mit.edu/6.828/2020/labs/pgtbl.html)
+
+  
+
 - ![image-20220204003047277](https://hanbaoaaa.xyz/tuchuang/images/2022/02/03/image-20220204003047277.png)
 
 - 物理内存地址是56bit，其中44bit是物理page号（**PPN**，Physical Page Number），剩下12bit是offset完全继承自虚拟内存地址（也就是地址转换时，**只需要将虚拟内存中的27bit翻译成物理内存中的44bit的page号**，剩下的12bitoffset直接拷贝过来即可）
